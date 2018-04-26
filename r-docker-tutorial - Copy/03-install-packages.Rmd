@@ -1,0 +1,86 @@
+---
+title: "Installing R Packages"
+output:
+  dcTemplate::dc_lesson_template:
+    fig_width: 6
+    fig_height: 6
+    highlight: pygments
+---
+
+
+```{r knitr_init, echo = FALSE, cache = FALSE}
+library(knitr)
+
+## Global options
+options(max.print = "75")
+opts_chunk$set(cache = TRUE,
+               prompt = FALSE,
+               tidy = TRUE,
+               comment = "> #",
+               message = FALSE,
+               warning = FALSE)
+opts_knit$set(width = 75)
+```
+
+## Installing R Packages within RStudio
+
+You can install R packages with RStudio in the browser, like you would on a desktop-RStudio-session, by using `install.packages`. Let's launch a hadleyverse Docker container to run RStudio as we did previously, and try to install the gapminder package, and load it and peak at the data.
+
+~~~
+# install package
+install.packages('gapminder')
+
+# load library
+library(gapminder)
+
+# peak at data
+head(gapminder)
+~~~
+
+Great! Now we have the Gapminder package installed so we can work with the whole dataset. But wait, what is going to happen when we exit the container? It will be deleted and since we didn't save this version of the Docker image, when we open another instance of the container we will have to install the Gapminder package again if we want to use it. 
+
+To avoid this, lets save the image by running `Docker commit` and then the next time we run a Docker container we can run an instance of this image which includes the Gapminder package. To do this we need to open another terminal window **before** we close our Docker container. 
+
+To save this specific version of the image we need to find this containers specific hash. We can see this by typing the following command in the new terminal window, and it will list all running Docker containers:
+
+~~~
+docker ps
+~~~
+
+The output should look something like what is shown below, and the specific hash for this container is the alphanumeric text in the first column.
+
+~~~
+8ada7bc86710        rocker/hadleyverse   "/init"             6 seconds ago       Up 5 seconds        1410/tcp, 0.0.0.0:8787->8787/tcp   sick_bhabha
+~~~
+
+Now to save this version of the image, in the new terminal window type:
+
+~~~
+docker commit -m "hadleyverse + gapminder" f9ca71428352 hadleyverse_gapminder
+~~~
+
+To save this Docker image we have to provide a commit message to describe the change that we have made to the image. We do this by passing the `-m` flag followed by the message in quotes. We also need to provide the specific hash for this version of the container (here f9ca71428352). Finally, we also provide a new name for the new image. We called this new image `hadleyverse_gapminder`.
+
+We can see that we now have two Docker images saved on our laptops by typing:
+
+~~~
+docker images
+~~~
+
+~~~
+REPOSITORY              TAG                 IMAGE ID            CREATED             SIZE
+hadleyverse_gapminder   latest              1cf34acb0d60        30 minutes ago      2.84 GB
+rocker/hadleyverse      latest              7cba8b06f25e        9 days ago          2.838 GB
+~~~
+
+You can test that this worked by running a Docker container from each image. You will find that the Gapminder package is only installed on the hadleyverse_gapminder image and not on the rocker/hadleyverse image.
+
+### Installing Dependencies external to the R system
+
+Many R packages have dependencies external to R, for example GSL, GDAL, JAGS and so on. To install these on a running rocker container you need to go to the docker command line and type the following:
+
+```{r external-dependencies, eval=FALSE}
+docker ps # find the ID of the running container you want to add a package to
+docker exec -it <container-id> bash # a docker command to start a bash shell in your container
+apt-get install libgsl0-dev # install the package, in this case GSL
+```
